@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Expression Evaluator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h2>Expression Evaluator</h2>
+        <input type="text" id="expression" placeholder="Enter expression (e.g., 2+3*4)">
+        <button onclick="evaluateExpression()">Evaluate</button>
+        <p id="result"></p>
+    </div>    
+    <script>
+        function evaluateExpression() {
+            const expr = document.getElementById('expression').value;
+            fetch('/evaluate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ expression: expr })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.result !== undefined) {
+                    document.getElementById('result').innerText = "Result: " + data.result;
+                } else {
+                    document.getElementById('result').innerText = "Error: " + data.error;
+                }
+            });
+        }
+        // Allow pressing Enter to evaluate
+        document.getElementById('expression').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') evaluateExpression();
+        });
+    </script>
+</body>
+</html>
