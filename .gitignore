@@ -26,3 +26,6 @@ htmlcov/
 *.egg-info/
 dist/
 build/
+
+# Etc.
+.env
