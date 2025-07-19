@@ -15,6 +15,7 @@
     <script>
         function evaluateExpression() {
             const expr = document.getElementById('expression').value;
+            document.getElementById('result').innerText = "Processing...";
             fetch('/evaluate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -22,13 +23,28 @@
             })
             .then(response => response.json())
             .then(data => {
-                if (data.result !== undefined) {
-                    document.getElementById('result').innerText = "Result: " + data.result;
+                if (data.request_id) {
+                    pollResult(data.request_id);
                 } else {
-                    document.getElementById('result').innerText = "Error: " + data.error;
+                    document.getElementById('result').innerText = "Error: Invalid response from server.";
                 }
             });
         }
+
+        function pollResult(requestId) {
+            fetch('/result/' + requestId)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'processing') {
+                        setTimeout(() => pollResult(requestId), 500);
+                    } else if (data.result !== undefined) {
+                        document.getElementById('result').innerText = "Result: " + data.result;
+                    } else if (data.error !== undefined) {
+                        document.getElementById('result').innerText = "Error: " + data.error;
+                    }
+                });
+        }
+
         // Allow pressing Enter to evaluate
         document.getElementById('expression').addEventListener('keydown', function(e) {
             if (e.key === 'Enter') evaluateExpression();
