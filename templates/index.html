@@ -1,54 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>Expression Evaluator</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
     <div class="container">
-        <h2>Expression Evaluator</h2>
-        <input type="text" id="expression" placeholder="Enter expression (e.g., 2+3*4)">
-        <button onclick="evaluateExpression()">Evaluate</button>
-        <p id="result"></p>
-    </div>    
+      <h2>Expression Evaluator</h2>
+      <input
+        type="text"
+        id="expression"
+        placeholder="Enter expression (e.g., 2+3*4 or lambda x: x*2)"
+      />
+      <input
+        type="number"
+        id="lambda-value"
+        placeholder="Lambda value (optional)"
+      />
+      <button onclick="evaluateExpression()">Evaluate</button>
+      <p id="result"></p>
+    </div>
     <script>
-        function evaluateExpression() {
-            const expr = document.getElementById('expression').value;
-            document.getElementById('result').innerText = "Processing...";
-            fetch('/evaluate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ expression: expr })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.request_id) {
-                    pollResult(data.request_id);
-                } else {
-                    document.getElementById('result').innerText = "Error: Invalid response from server.";
-                }
-            });
+      function evaluateExpression() {
+        const expr = document.getElementById("expression").value;
+        const lambdaValue = document.getElementById("lambda-value").value;
+        document.getElementById("result").innerText = "Processing...";
+
+        let url = "/evaluate";
+        let body = { expression: expr };
+
+        // If input starts with "lambda", use the lambda route
+        if (expr.trim().startsWith("lambda")) {
+          url = "/evaluate-lambda";
+          body.value = lambdaValue ? Number(lambdaValue) : 0;
         }
 
-        function pollResult(requestId) {
-            fetch('/result/' + requestId)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'processing') {
-                        setTimeout(() => pollResult(requestId), 500);
-                    } else if (data.result !== undefined) {
-                        document.getElementById('result').innerText = "Result: " + data.result;
-                    } else if (data.error !== undefined) {
-                        document.getElementById('result').innerText = "Error: " + data.error;
-                    }
-                });
-        }
+        fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.request_id) {
+              pollResult(data.request_id);
+            } else {
+              document.getElementById("result").innerText =
+                "Error: Invalid response from server.";
+            }
+          });
+      }
 
-        // Allow pressing Enter to evaluate
-        document.getElementById('expression').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') evaluateExpression();
+      function pollResult(requestId) {
+        fetch("/result/" + requestId)
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.status === "processing") {
+              setTimeout(() => pollResult(requestId), 500);
+            } else if (data.result !== undefined) {
+              document.getElementById("result").innerText =
+                "Result: " + data.result;
+            } else if (data.error !== undefined) {
+              document.getElementById("result").innerText =
+                "Error: " + data.error;
+            }
+          });
+      }
+
+      // Allow pressing Enter to evaluate
+      document
+        .getElementById("expression")
+        .addEventListener("keydown", function (e) {
+          if (e.key === "Enter") evaluateExpression();
         });
     </script>
-</body>
+  </body>
 </html>

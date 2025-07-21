@@ -27,3 +27,20 @@ def test_evaluate_and_result(client):
             assert result_data['result'] == '4'
             break
         assert result_resp.status_code == 202
+
+def test_evaluate_lambda_and_result(client):
+    # Submit a lambda expression
+    response = client.post('/evaluate-lambda', json={'expression': 'lambda x: x*2', 'value': 5})
+    assert response.status_code == 200
+    data = response.get_json()
+    assert 'request_id' in data
+
+    # Poll for the result
+    req_id = data['request_id']
+    for _ in range(10):
+        result_resp = client.get(f'/result/{req_id}')
+        if result_resp.status_code == 200:
+            result_data = result_resp.get_json()
+            assert result_data['result'] == '10'
+            break
+        assert result_resp.status_code == 202

@@ -117,3 +117,13 @@ def parser(expression) -> float:
 
     # print("{0} = {1}" .format(expression,stack[0]))    
     return stack[0]
+
+def lambda_parser(expression, value):
+    # Only allow lambda expressions for safety
+    if not expression.strip().startswith("lambda"):
+        raise ValueError("Only lambda expressions are allowed.")
+    try:
+        func = eval(expression)
+        return func(value)
+    except Exception as e:
+        raise ValueError(f"Invalid lambda expression: {e}")

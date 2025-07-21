@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, render_template
 from flask_sqlalchemy import SQLAlchemy
-from utils.parser import parser
+from utils.parser import parser, lambda_parser
 from utils.stream import Stream
 import uuid
 import os
@@ -34,10 +34,14 @@ expression_stream = Stream()
 
 # Function to process expressions in the background
 def process_expression(item):
-    expr, req_id = item
     with app.app_context():
         try:
-            result = parser(expr)
+            if isinstance(item, tuple) and item[0] == 'lambda':
+                _, expr, value, req_id = item
+                result = lambda_parser(expr, value)
+            else:
+                expr, req_id = item
+                result = parser(expr)
             entry = ExpressionResult(id=req_id, result=str(result), error=None)
         except Exception as e:
             entry = ExpressionResult(id=req_id, result=None, error=str(e))
@@ -57,6 +61,16 @@ def evaluate():
     expr = data.get('expression', '')
     req_id = str(uuid.uuid4())
     expression_stream.add((expr, req_id))
+    return jsonify({'request_id': req_id})
+
+@app.route('/evaluate-lambda', methods=['POST'])
+def evaluate_lambda():
+    data = request.get_json()
+    expr = data.get('expression', '')
+    value = data.get('value', 0)  # User supplies a value for the lambda
+    req_id = str(uuid.uuid4())
+    # Add to stream with a tuple indicating lambda
+    expression_stream.add(('lambda', expr, value, req_id))
     return jsonify({'request_id': req_id})
 
 @app.route('/result/<req_id>', methods=['GET'])
