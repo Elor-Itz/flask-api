@@ -1,4 +1,6 @@
 Flask==3.1.1
 Flask-SQLAlchemy
+pytest
+pytest-flask
 psycopg2-binary
 python-dotenv
