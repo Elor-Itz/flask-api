@@ -1,5 +1,6 @@
 from abc import ABC
 from abc import ABC,abstractmethod
+from asteval import Interpreter
 
 class Expression(ABC):
     @abstractmethod
@@ -35,11 +36,32 @@ class Div(BinExp):
 
 # Function to determine operator precedence
 def precedence(op):
+    """
+    Return the precedence level of the given operator.
+
+    Args:
+        op (str): The operator ('+', '-', '*', '/', 'u+', 'u-').
+
+    Returns:
+        int: Precedence value (higher means higher precedence).
+    """
     precedence = {'+': 1, '-': 1, '*': 2, '/': 2, 'u+': 3, 'u-': 3}
     return precedence.get(op, 0)
 
-# Parser function to evaluate the expression
-def parser(expression) -> float:    
+# Parser function to evaluate normal expressions
+def parser(expression) -> float:
+    """
+    Parse and evaluate a mathematical expression string.
+
+    Args:
+        expression (str): The mathematical expression to evaluate.
+
+    Returns:
+        float: The result of the evaluated expression.
+
+    Raises:
+        ValueError: If the expression is invalid.
+    """   
     stack = []
     queue = []
     i = 0
@@ -118,12 +140,26 @@ def parser(expression) -> float:
     # print("{0} = {1}" .format(expression,stack[0]))    
     return stack[0]
 
+# Parser function to evaluate lambda expressions
 def lambda_parser(expression, value):
-    # Only allow lambda expressions for safety
+    """
+    Safely evaluate a lambda expression with a given value using asteval.
+
+    Args:
+        expression (str): The lambda expression (e.g., 'lambda x: x*2').
+        value (float): The value to pass to the lambda function.
+
+    Returns:
+        float: The result of the lambda function.
+
+    Raises:
+        ValueError: If the expression is not a valid lambda or evaluation fails.
+    """
     if not expression.strip().startswith("lambda"):
         raise ValueError("Only lambda expressions are allowed.")
+    aeval = Interpreter()
     try:
-        func = eval(expression)
+        func = aeval(expression)
         return func(value)
     except Exception as e:
         raise ValueError(f"Invalid lambda expression: {e}")
