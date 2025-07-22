@@ -1,6 +1,6 @@
 from flask import Flask
 from models import db
-from routes import bp
+from routes import bp, process_expression, expression_stream
 import os
 
 from dotenv import load_dotenv
@@ -18,6 +18,9 @@ db.init_app(app)
 # Create tables if they don't exist
 with app.app_context():
     db.create_all()
+
+# Set the stream to use the processing function, passing the app instance
+expression_stream.forEach(lambda item: process_expression(item, app))
 
 # Register the blueprint
 app.register_blueprint(bp)

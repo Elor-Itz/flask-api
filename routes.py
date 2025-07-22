@@ -12,14 +12,14 @@ bp = Blueprint('main', __name__)
 expression_stream = Stream()
 
 # Function to process expressions in the background
-def process_expression(item):
+def process_expression(item, app):
     """
     Background task to process an expression or lambda expression.
 
     Args:
         item: Tuple containing expression data.
     """
-    with bp.app_context():
+    with app.app_context():
         try:
             if isinstance(item, tuple) and item[0] == 'lambda':
                 _, expr, value, req_id = item
