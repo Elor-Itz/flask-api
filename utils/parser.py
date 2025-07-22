@@ -1,5 +1,6 @@
 from abc import ABC
 from abc import ABC,abstractmethod
+from asteval import Interpreter
 
 class Expression(ABC):
     @abstractmethod
@@ -119,11 +120,11 @@ def parser(expression) -> float:
     return stack[0]
 
 def lambda_parser(expression, value):
-    # Only allow lambda expressions for safety
     if not expression.strip().startswith("lambda"):
         raise ValueError("Only lambda expressions are allowed.")
+    aeval = Interpreter()
     try:
-        func = eval(expression)
+        func = aeval(expression)
         return func(value)
     except Exception as e:
         raise ValueError(f"Invalid lambda expression: {e}")
