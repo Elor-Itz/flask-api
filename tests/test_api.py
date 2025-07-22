@@ -1,15 +1,26 @@
 import pytest
 from app import app, db
 
+@pytest.fixture(scope="session", autouse=True)
+def setup_db():
+    """Create tables once per test session and drop after."""
+    with app.app_context():
+        db.create_all()
+    yield
+    with app.app_context():
+        db.drop_all()
+
 @pytest.fixture
 def client():
     app.config['TESTING'] = True
     with app.test_client() as client:
-        with app.app_context():
-            db.create_all()
+        # Start the stream processor only once per test session
+        from routes import expression_stream, process_expression
+        # Use a flag to ensure the stream is only started once
+        if not hasattr(expression_stream, "_started"):
+            expression_stream.forEach(lambda item: process_expression(item, app))
+            expression_stream._started = True
         yield client
-        with app.app_context():
-            db.drop_all()
 
 def test_evaluate_and_result(client):
     # Submit an expression
@@ -28,6 +39,12 @@ def test_evaluate_and_result(client):
             break
         assert result_resp.status_code == 202
 
+def test_invalid_expression(client):
+    response = client.post('/evaluate', json={'expression': '2++2'})
+    assert response.status_code == 400
+    data = response.get_json()
+    assert 'error' in data
+
 def test_evaluate_lambda_and_result(client):
     # Submit a lambda expression
     response = client.post('/evaluate-lambda', json={'expression': 'lambda x: x*2', 'value': 5})
@@ -44,3 +61,23 @@ def test_evaluate_lambda_and_result(client):
             assert result_data['result'] == '10'
             break
         assert result_resp.status_code == 202
+
+def test_invalid_lambda(client):
+    response = client.post('/evaluate-lambda', json={'expression': 'lambda x: x*2; import os', 'value': 5})
+    assert response.status_code == 400
+    data = response.get_json()
+    assert 'error' in data
+
+def test_result_processing_status(client):
+    response = client.post('/evaluate', json={'expression': '2+2'})
+    req_id = response.get_json()['request_id']
+    result_resp = client.get(f'/result/{req_id}')
+    assert result_resp.status_code == 202
+    data = result_resp.get_json()
+    assert data['status'] == 'processing'
+
+def test_health_endpoint(client):
+    response = client.get('/health')
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data['status'] == 'ok'
