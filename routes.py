@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify, render_template
 from models import db, ExpressionResult
 from utils.parser import parser, lambda_parser
 from utils.stream import Stream
+from utils.validation import is_valid_expression, is_valid_lambda
 import uuid
 
 # Create a Blueprint for the main application
@@ -50,6 +51,8 @@ def evaluate():
     """
     data = request.get_json()
     expr = data.get('expression', '')
+    if not is_valid_expression(expr):
+        return jsonify({'error': 'Invalid expression'}), 400
     req_id = str(uuid.uuid4())
     expression_stream.add((expr, req_id))
     return jsonify({'request_id': req_id})
@@ -64,9 +67,10 @@ def evaluate_lambda():
     """
     data = request.get_json()
     expr = data.get('expression', '')
-    value = data.get('value', 0)  # User supplies a value for the lambda
-    req_id = str(uuid.uuid4())
-    # Add to stream with a tuple indicating lambda
+    value = data.get('value', 0)
+    if not is_valid_lambda(expr):
+        return jsonify({'error': 'Invalid lambda expression'}), 400
+    req_id = str(uuid.uuid4())    
     expression_stream.add(('lambda', expr, value, req_id))
     return jsonify({'request_id': req_id})
 
