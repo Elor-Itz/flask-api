@@ -21,6 +21,14 @@ db = SQLAlchemy(app)
 
 # Define a model for storing results
 class ExpressionResult(db.Model):
+    """
+    SQLAlchemy model for storing the result and error of an evaluated expression.
+
+    Attributes:
+        id (str): Unique request ID.
+        result (str): Evaluation result.
+        error (str): Error message, if any.
+    """
     id = db.Column(db.String(36), primary_key=True)
     result = db.Column(db.String, nullable=True)
     error = db.Column(db.String, nullable=True)
@@ -34,6 +42,12 @@ expression_stream = Stream()
 
 # Function to process expressions in the background
 def process_expression(item):
+    """
+    Background task to process an expression or lambda expression.
+
+    Args:
+        item: Tuple containing expression data.
+    """
     with app.app_context():
         try:
             if isinstance(item, tuple) and item[0] == 'lambda':
@@ -53,10 +67,17 @@ expression_stream.forEach(process_expression)
 
 @app.route('/')
 def index():
+    """Render the main web interface."""
     return render_template('index.html')
 
 @app.route('/evaluate', methods=['POST'])
 def evaluate():
+    """
+    API endpoint to submit a standard mathematical expression for evaluation.
+
+    Returns:
+        JSON with request_id.
+    """
     data = request.get_json()
     expr = data.get('expression', '')
     req_id = str(uuid.uuid4())
@@ -65,6 +86,12 @@ def evaluate():
 
 @app.route('/evaluate-lambda', methods=['POST'])
 def evaluate_lambda():
+    """
+    API endpoint to submit a lambda expression and value for evaluation.
+
+    Returns:
+        JSON with request_id.
+    """
     data = request.get_json()
     expr = data.get('expression', '')
     value = data.get('value', 0)  # User supplies a value for the lambda
@@ -75,6 +102,15 @@ def evaluate_lambda():
 
 @app.route('/result/<req_id>', methods=['GET'])
 def get_result(req_id):
+    """
+    API endpoint to poll for the result of an evaluated expression.
+
+    Args:
+        req_id (str): The request ID.
+
+    Returns:
+        JSON with result or error, or status 'processing'.
+    """
     entry = db.session.get(ExpressionResult, req_id)
     if entry:
         result = {'result': entry.result} if entry.result else {'error': entry.error}
