@@ -41,6 +41,11 @@ def index():
     """Render the main web interface."""
     return render_template('index.html')
 
+@bp.route('/health', methods=['GET'])
+def health():
+    """Health check endpoint."""
+    return jsonify({'status': 'ok'})
+
 @bp.route('/evaluate', methods=['POST'])
 def evaluate():
     """
