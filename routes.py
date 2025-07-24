@@ -65,6 +65,10 @@ class EvaluateResource(Resource):
         if not is_valid_expression(expr):
             return {'error': 'Invalid expression'}, 400
         req_id = str(uuid.uuid4())
+        try:            
+            parser(expr)
+        except Exception as e:
+            return {'error': str(e)}, 400
         expression_stream.add((expr, req_id))
         return {'request_id': req_id}
 

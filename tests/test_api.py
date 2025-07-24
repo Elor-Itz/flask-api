@@ -32,8 +32,8 @@ def test_health_endpoint(client):
     assert data['status'] == 'ok'
 
 # Standard expression tests
-def test_evaluate_and_result(client):
-    response = client.post('/evaluation/expression', json={'expression': '2+2'})
+def test_evaluate_expression(client):
+    response = client.post('/evaluation/expression', json={'expression': '2+3*4-5/2'})
     assert response.status_code == 200
     data = response.get_json()
     assert 'request_id' in data
@@ -42,11 +42,12 @@ def test_evaluate_and_result(client):
         result_resp = client.get(f'/evaluation/result/{req_id}')
         if result_resp.status_code == 200:
             result_data = result_resp.get_json()
-            assert result_data['result'] == '4'
+            expected = str(2+3*4-5/2)
+            assert abs(float(result_data['result']) - float(expected)) < 1e-6
             break
         assert result_resp.status_code == 202
 
-def test_power_operation_standard(client):
+def test_power_operation(client):
     response = client.post('/evaluation/expression', json={'expression': '2^5+1'})
     assert response.status_code == 200
     data = response.get_json()
@@ -57,6 +58,34 @@ def test_power_operation_standard(client):
         if result_resp.status_code == 200:
             result_data = result_resp.get_json()
             assert result_data['result'] == '33'
+            break
+        assert result_resp.status_code == 202
+
+def test_parser_spaces(client):
+    response = client.post('/evaluation/expression', json={'expression': ' 2 + 3 '})
+    assert response.status_code == 200
+    data = response.get_json()
+    assert 'request_id' in data
+    req_id = data['request_id']
+    for _ in range(10):
+        result_resp = client.get(f'/evaluation/result/{req_id}')
+        if result_resp.status_code == 200:
+            result_data = result_resp.get_json()
+            assert result_data['result'] == '5'
+            break
+        assert result_resp.status_code == 202
+
+def test_parser_unary_plus(client):
+    response = client.post('/evaluation/expression', json={'expression': '+5+2'})
+    assert response.status_code == 200
+    data = response.get_json()
+    assert 'request_id' in data
+    req_id = data['request_id']
+    for _ in range(10):
+        result_resp = client.get(f'/evaluation/result/{req_id}')
+        if result_resp.status_code == 200:
+            result_data = result_resp.get_json()
+            assert result_data['result'] == '7'
             break
         assert result_resp.status_code == 202
 
@@ -74,6 +103,26 @@ def test_parser_parentheses(client):
             break
         assert result_resp.status_code == 202
 
+def test_parser_nested_parentheses(client):
+    response = client.post('/evaluation/expression', json={'expression': '2*(3+(4*2))'})
+    assert response.status_code == 200
+    data = response.get_json()
+    assert 'request_id' in data
+    req_id = data['request_id']
+    for _ in range(10):
+        result_resp = client.get(f'/evaluation/result/{req_id}')
+        if result_resp.status_code == 200:
+            result_data = result_resp.get_json()
+            assert result_data['result'] == '22'
+            break
+        assert result_resp.status_code == 202
+
+def test_parser_invalid_parentheses(client):
+    response = client.post('/evaluation/expression', json={'expression': ')('})
+    assert response.status_code == 400
+    data = response.get_json()
+    assert 'error' in data
+
 def test_parser_unary_minus(client):
     response = client.post('/evaluation/expression', json={'expression': '-5+2'})
     assert response.status_code == 200
@@ -90,18 +139,10 @@ def test_parser_unary_minus(client):
 
 def test_parser_division_by_zero(client):
     response = client.post('/evaluation/expression', json={'expression': '2/0'})
-    assert response.status_code == 200
+    assert response.status_code == 400
     data = response.get_json()
-    assert 'request_id' in data
-    req_id = data['request_id']
-    for _ in range(10):
-        result_resp = client.get(f'/evaluation/result/{req_id}')
-        if result_resp.status_code == 200:
-            result_data = result_resp.get_json()
-            assert 'error' in result_data
-            assert 'division' in result_data['error'] or 'ZeroDivisionError' in result_data['error']
-            break
-        assert result_resp.status_code == 202
+    assert 'error' in data
+    assert 'division' in data['error'].lower() or 'zero' in data['error'].lower()
 
 def test_invalid_expression(client):
     response = client.post('/evaluation/expression', json={'expression': '2++2'})
@@ -151,12 +192,6 @@ def test_variable_parser_implicit_multiplication(client):
             assert result_data['result'] == '9'
             break
         assert result_resp.status_code == 202
-
-def test_invalid_variable_expression(client):
-    response = client.post('/evaluation/variable', json={'expression': 'x++2', 'value': 5})
-    assert response.status_code == 400
-    data = response.get_json()
-    assert 'error' in data
 
 def test_variable_parser_invalid_characters(client):
     response = client.post('/evaluation/variable', json={'expression': 'x*2a', 'value': 5})

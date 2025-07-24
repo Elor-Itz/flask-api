@@ -79,6 +79,18 @@ def parser(expression) -> float:
             tokens.append(expression[i])
             i += 1
 
+    # Check for balanced parentheses
+    paren_count = 0
+    for t in tokens:
+        if t == '(':
+            paren_count += 1
+        elif t == ')':
+            paren_count -= 1
+        if paren_count < 0:
+            raise ValueError("Unbalanced parentheses in expression.")
+    if paren_count != 0:
+        raise ValueError("Unbalanced parentheses in expression.")
+
     i = 0
     while i < len(tokens):      
         token = tokens[i]             
