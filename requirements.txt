@@ -1,7 +1,15 @@
+# Core framework
 Flask==3.1.1
+Flask-RESTX
 Flask-SQLAlchemy
-pytest
-pytest-flask
+
+# Database drivers
 psycopg2-binary
+
+# Utilities
 python-dotenv
 asteval
+
+# Testing
+pytest
+pytest-flask
