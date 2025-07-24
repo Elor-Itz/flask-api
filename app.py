@@ -1,4 +1,5 @@
 from flask import Flask
+from api import api
 from models import db
 from routes import bp, process_expression, expression_stream
 import os
@@ -24,6 +25,9 @@ expression_stream.forEach(lambda item: process_expression(item, app))
 
 # Register the blueprint
 app.register_blueprint(bp)
+
+# Initialize the Flask-Restx API
+api.init_app(app)
 
 if __name__ == '__main__':
     app.run(debug=True)

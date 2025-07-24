@@ -1,6 +1,6 @@
 from abc import ABC
 from abc import ABC,abstractmethod
-from asteval import Interpreter
+import re
 
 class Expression(ABC):
     @abstractmethod
@@ -45,13 +45,14 @@ def precedence(op):
     Returns:
         int: Precedence value (higher means higher precedence).
     """
-    precedence = {'+': 1, '-': 1, '*': 2, '/': 2, 'u+': 3, 'u-': 3}
+    precedence = {'+': 1, '-': 1, '*': 2, '/': 2, '**': 4, 'u+': 3, 'u-': 3}
     return precedence.get(op, 0)
 
 # Parser function to evaluate normal expressions
 def parser(expression) -> float:
     """
     Parse and evaluate a mathematical expression string.
+    Supports +, -, *, /, and ** for exponentiation.
 
     Args:
         expression (str): The mathematical expression to evaluate.
@@ -62,33 +63,56 @@ def parser(expression) -> float:
     Raises:
         ValueError: If the expression is invalid.
     """   
+    # Convert ^ to ** for exponentiation
+    expression = expression.replace('^', '**')
+    
     stack = []
     queue = []
     i = 0
-    while i < len(expression):      
-        token = expression[i]             
+    # Tokenize expression, handling '**' as a single token
+    tokens = []
+    while i < len(expression):
+        if expression[i:i+2] == '**':
+            tokens.append('**')
+            i += 2
+        else:
+            tokens.append(expression[i])
+            i += 1
+
+    # Check for balanced parentheses
+    paren_count = 0
+    for t in tokens:
+        if t == '(':
+            paren_count += 1
+        elif t == ')':
+            paren_count -= 1
+        if paren_count < 0:
+            raise ValueError("Unbalanced parentheses in expression.")
+    if paren_count != 0:
+        raise ValueError("Unbalanced parentheses in expression.")
+
+    i = 0
+    while i < len(tokens):      
+        token = tokens[i]             
 
         # If character is a digit/number -> collect all digits and enqueue   
         if token.isdigit():        
             num = int(token)        
             i += 1
-            # If a number
-            while i < len(expression) and expression[i].isdigit():
-                num = num * 10 + int(expression[i])
+            while i < len(tokens) and tokens[i].isdigit():
+                num = num * 10 + int(tokens[i])
                 i += 1
             queue.append(num)
             continue
 
         # If character is an operator
-        elif token in '+-*/':
+        elif token in ['+', '-', '*', '/', '**']:
             # Handling unary operators
-            if (token == '+' or token == '-') and (i == 0 or expression[i - 1] in '+-*/('):
-                stack.append('u' + token)  # Mark as unary operator
+            if (token == '+' or token == '-') and (i == 0 or tokens[i - 1] in ['+', '-', '*', '/', '**', '(']):
+                queue.append('u' + token)  # Mark as unary operator, enqueue to queue!
             else:
-                # If the operator takes precedence over the last in the stack -> pop and enqueue it
-                while len(stack) > 0 and (stack[-1] in '+-*/' and (precedence(token) <= precedence(stack[-1]))):
+                while len(stack) > 0 and (stack[-1] in ['+', '-', '*', '/', '**'] and (precedence(token) <= precedence(stack[-1]))):
                     queue.append(stack.pop())
-                # We push the current operator to the stack anyway
                 stack.append(token)             
         
         # If character is left parenthesis -> push onto the stack
@@ -98,8 +122,7 @@ def parser(expression) -> float:
         # If character is right parenthesis -> pop operators from stack and enqueue until the top one is a left parenthesis       
         elif token == ')':
             while stack and stack[-1] != '(':
-              queue.append(stack.pop())          
-            # Pop '('
+                queue.append(stack.pop())          
             stack.pop()
 
         i += 1
@@ -113,17 +136,29 @@ def parser(expression) -> float:
         token = queue.pop(0)        
         
         # If a number -> pop and push onto the stack
-        if isinstance(token, int) or (token[0] == '-' and token[1:].isdigit()):
-          stack.append(token) 
+        if isinstance(token, int) or (isinstance(token, str) and token.lstrip('-').isdigit()):
+            stack.append(int(token)) 
 
-        # If a unary operator -> pop the last operand; if '-' multiply operand by -1 and return to the stack
-        elif stack and (token == 'u+' or token == 'u-'):
-            op = stack.pop()
-            if token == 'u-':
-                stack.append(-op)
+        # If a unary operator -> apply to next number in queue
+        elif token == 'u-' or token == 'u+':
+            if len(queue) > 0 and (isinstance(queue[0], int) or (isinstance(queue[0], str) and queue[0].lstrip('-').isdigit())):
+                op = queue.pop(0)
+                op = int(op)
+                if token == 'u-':
+                    stack.append(-op)
+                elif token == 'u+':
+                    stack.append(op)
+            else:
+                # fallback: if stack has an operand, apply unary
+                if stack:
+                    op = stack.pop()
+                    if token == 'u-':
+                        stack.append(-op)
+                    elif token == 'u+':
+                        stack.append(op)
 
         # If a binary operator -> pop the last two operands from stack and push the performed operation
-        elif stack and token in '+-*/':          
+        elif stack and token in ['+', '-', '*', '/', '**']:          
             right = stack.pop() 
             left = stack.pop()
             calc = 0
@@ -135,31 +170,50 @@ def parser(expression) -> float:
                 calc = left * right
             if token == '/':
                 calc = left / right
+            if token == '**':
+                calc = left ** right
             stack.append(calc)            
 
     # print("{0} = {1}" .format(expression,stack[0]))    
     return stack[0]
 
-# Parser function to evaluate lambda expressions
-def lambda_parser(expression, value):
+# Parser function to evaluate variable expressions
+def variable_parser(expression, value):
     """
-    Safely evaluate a lambda expression with a given value using asteval.
+    Safely evaluate a math expression with a variable 'x' using your custom parser.
 
     Args:
-        expression (str): The lambda expression (e.g., 'lambda x: x*2').
-        value (float): The value to pass to the lambda function.
+        expression (str): The math expression (e.g., 'x*2+1').
+        value (float): The value to substitute for 'x'.
 
     Returns:
-        float: The result of the lambda function.
+        float: The result of the evaluated expression.
 
     Raises:
-        ValueError: If the expression is not a valid lambda or evaluation fails.
+        ValueError: If the expression is not valid or evaluation fails.
     """
-    if not expression.strip().startswith("lambda"):
-        raise ValueError("Only lambda expressions are allowed.")
-    aeval = Interpreter()
+    # Only allow x, digits, operators, parentheses, spaces, and ^
+    if not re.match(r'^[x\d+\-*/().\s^]+$', expression):
+        raise ValueError("Unsafe characters in expression.")
+
+    # Convert ^ to ** for exponentiation
+    expr = expression.replace('^', '**')
+
+    # Insert * for implicit multiplication (e.g., 2x -> 2*x)
+    expr = re.sub(r'(\d)(x)', r'\1*\2', expr)
+    expr = re.sub(r'(x)(\d)', r'\1*\2', expr)
+
+    # Substitute x with value
+    expr = expr.replace('x', str(value))
+
+    # Validate consecutive operators
+    if re.search(r'[\+\-\*/]{2,}', expr.replace('**', '')):
+        raise ValueError("Invalid consecutive operators.")
+
+    # Use your custom parser for evaluation
     try:
-        func = aeval(expression)
-        return func(value)
+        result = parser(expr)
+        return result
     except Exception as e:
-        raise ValueError(f"Invalid lambda expression: {e}")
+        raise ValueError(f"Invalid math expression: {e}")
+        

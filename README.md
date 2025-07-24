@@ -1,10 +1,10 @@
 # Expression Evaluator API
 
-This project is a Flask-based microservice API for evaluating mathematical and lambda expressions asynchronously. It uses a background processing stream, stores results in a PostgreSQL database, and supports Docker-based deployment and automated testing.
+This project is a Flask-based microservice API for evaluating mathematical expressions asynchronously. It uses a background processing stream, stores results in a PostgreSQL database, and supports Docker-based deployment and automated testing.
 
 ## Features
 
-- Submit mathematical or lambda expressions for evaluation via a REST API
+- Submit mathematical expressions for evaluation via a REST API
 - Asynchronous processing using a background thread (Stream)
 - Poll for results using a unique request ID
 - Results are stored in PostgreSQL
@@ -74,15 +74,15 @@ This project is a Flask-based microservice API for evaluating mathematical and l
 ## Usage
 
 - **Standard expressions:** Enter a mathematical expression (e.g., `2+3*4`) in the web interface and submit.
-- **Lambda expressions:** Enter a lambda expression (e.g., `lambda x: x*2`) and provide a value for `x` in the Lambda value field.
+- **Variable expressions:** Enter a variable math expression (e.g., `x*2` or `x^2 + 2*x + 1`) and provide a value for `x` in the Variable value field.
 - The API will return a `request_id`. The front end will poll for the result and display it when ready.
 - All inputs are validated for safety before processing.
 
 ## API Endpoints
 
-- `POST /evaluate` — Submit a standard mathematical expression.
-- `POST /evaluate-lambda` — Submit a lambda expression and a value.
-- `GET /result/<request_id>` — Poll for the result of an evaluation.
+- `POST /evaluation/expression` — Submit a standard mathematical expression.
+- `POST /evaluation/variable` — Submit a variable math expression and a value.
+- `GET /evaluation/result/<request_id>` — Poll for the result of an evaluation.
 - `GET /health` — Health check endpoint.
 
 ## Testing

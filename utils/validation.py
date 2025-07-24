@@ -4,7 +4,7 @@ def is_valid_expression(expr):
     """
     Validate a standard mathematical expression.
 
-    Only allows digits, operators (+, -, *, /), parentheses, and spaces.
+    Only allows digits, operators (+, -, *, /, ^), parentheses, and spaces.
     Disallows consecutive operators.
 
     Args:
@@ -13,24 +13,33 @@ def is_valid_expression(expr):
     Returns:
         bool: True if valid, False otherwise.
     """
-    # Only allow valid characters
-    if not re.match(r'^[\d+\-*/().\s]+$', expr):
+    # Only allow valid characters (add ^)
+    if not re.match(r'^[\d+\-*/().\s^]+$', expr):
         return False
-    # Disallow consecutive operators (simple check)
-    if re.search(r'[\+\-\*/]{2,}', expr):
+    # Disallow consecutive operators (simple check, add ^)
+    if re.search(r'[\+\-\*/^]{2,}', expr):
         return False
     return True
 
-def is_valid_lambda(expr):
+def is_valid_variable_expression(expr):
     """
-    Validate a lambda expression.
+    Validate a variable math expression (e.g., 'x*2+1').
 
-    Checks that the expression starts with 'lambda' and does not contain 'import'.
+    Only allows x, digits, operators (+, -, *, /, ^), parentheses, and spaces.
+    Disallows consecutive operators and 'import'.
 
     Args:
-        expr (str): The lambda expression to validate.
+        expr (str): The expression to validate.
 
     Returns:
         bool: True if valid, False otherwise.
     """
-    return expr.strip().startswith('lambda') and 'import' not in expr
+    # Only allow x, digits, operators, parentheses, spaces, and ^
+    if not re.match(r'^[x\d+\-*/().\s^]+$', expr):
+        return False
+    # Disallow consecutive operators (simple check)
+    if re.search(r'[\+\-\*/^]{2,}', expr):
+        return False
+    if 'import' in expr:
+        return False
+    return True
