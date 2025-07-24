@@ -176,7 +176,7 @@
                 const exprTd = document.createElement("td");
                 exprTd.textContent = item.expression;
                 const resultTd = document.createElement("td");
-                resultTd.innerHTML = `<span class="history-result">${item.result}</span>`;
+                resultTd.innerHTML = item.result;
                 tr.appendChild(exprTd);
                 tr.appendChild(resultTd);
                 historyList.appendChild(tr);
