@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify, render_template
+from flask_restx import Namespace, Resource, fields
 from models import db, ExpressionResult
 from utils.parser import parser, lambda_parser
 from utils.stream import Stream
@@ -13,12 +14,6 @@ expression_stream = Stream()
 
 # Function to process expressions in the background
 def process_expression(item, app):
-    """
-    Background task to process an expression or lambda expression.
-
-    Args:
-        item: Tuple containing expression data.
-    """
     with app.app_context():
         try:
             if isinstance(item, tuple) and item[0] == 'lambda':
@@ -36,65 +31,79 @@ def process_expression(item, app):
 # Set the stream to use the processing function
 expression_stream.forEach(process_expression)
 
+# --- Web UI routes ---
 @bp.route('/')
 def index():
-    """Render the main web interface."""
     return render_template('index.html')
 
 @bp.route('/health', methods=['GET'])
 def health():
-    """Health check endpoint."""
     return jsonify({'status': 'ok'})
 
-@bp.route('/evaluate', methods=['POST'])
-def evaluate():
-    """
-    API endpoint to submit a standard mathematical expression for evaluation.
+# --- REST API using Flask-RESTX ---
+api_ns = Namespace('api', description='Expression evaluation operations')
 
-    Returns:
-        JSON with request_id.
-    """
-    data = request.get_json()
-    expr = data.get('expression', '')
-    if not is_valid_expression(expr):
-        return jsonify({'error': 'Invalid expression'}), 400
-    req_id = str(uuid.uuid4())
-    expression_stream.add((expr, req_id))
-    return jsonify({'request_id': req_id})
+# Models for Swagger docs
+evaluate_model = api_ns.model('Evaluate', {
+    'expression': fields.String(required=True, description='Mathematical expression')
+})
 
-@bp.route('/evaluate-lambda', methods=['POST'])
-def evaluate_lambda():
-    """
-    API endpoint to submit a lambda expression and value for evaluation.
+evaluate_lambda_model = api_ns.model('EvaluateLambda', {
+    'expression': fields.String(required=True, description='Lambda expression'),
+    'value': fields.Raw(required=True, description='Value for lambda')
+})
 
-    Returns:
-        JSON with request_id.
-    """
-    data = request.get_json()
-    expr = data.get('expression', '')
-    value = data.get('value', 0)
-    if not is_valid_lambda(expr):
-        return jsonify({'error': 'Invalid lambda expression'}), 400
-    req_id = str(uuid.uuid4())    
-    expression_stream.add(('lambda', expr, value, req_id))
-    return jsonify({'request_id': req_id})
+result_model = api_ns.model('Result', {
+    'result': fields.String(description='Evaluation result'),
+    'error': fields.String(description='Error message')
+})
 
-@bp.route('/result/<req_id>', methods=['GET'])
-def get_result(req_id):
-    """
-    API endpoint to poll for the result of an evaluated expression.
+@api_ns.route('/health')
+class HealthResource(Resource):
+    def get(self):
+        """Health check endpoint"""
+        return {'status': 'ok'}
 
-    Args:
-        req_id (str): The request ID.
+@api_ns.route('/evaluate')
+class EvaluateResource(Resource):
+    @api_ns.expect(evaluate_model)
+    def post(self):
+        """Submit a standard mathematical expression for evaluation"""
+        data = api_ns.payload
+        expr = data.get('expression', '')
+        if not is_valid_expression(expr):
+            return {'error': 'Invalid expression'}, 400
+        req_id = str(uuid.uuid4())
+        expression_stream.add((expr, req_id))
+        return {'request_id': req_id}
 
-    Returns:
-        JSON with result or error, or status 'processing'.
-    """
-    entry = db.session.get(ExpressionResult, req_id)
-    if entry:
-        result = {'result': entry.result} if entry.result else {'error': entry.error}
-        db.session.delete(entry)
-        db.session.commit()
-        return jsonify(result)
-    else:
-        return jsonify({'status': 'processing'}), 202
+@api_ns.route('/evaluate-lambda')
+class EvaluateLambdaResource(Resource):
+    @api_ns.expect(evaluate_lambda_model)
+    def post(self):
+        """Submit a lambda expression and value for evaluation"""
+        data = api_ns.payload
+        expr = data.get('expression', '')
+        value = data.get('value', 0)
+        if not is_valid_lambda(expr):
+            return {'error': 'Invalid lambda expression'}, 400
+        req_id = str(uuid.uuid4())
+        expression_stream.add(('lambda', expr, value, req_id))
+        return {'request_id': req_id}
+
+@api_ns.route('/result/<string:req_id>')
+class ResultResource(Resource):
+    @api_ns.marshal_with(result_model, code=200, description='Result or error')
+    def get(self, req_id):
+        """Poll for the result of an evaluated expression"""
+        entry = db.session.get(ExpressionResult, req_id)
+        if entry:
+            result = {'result': entry.result} if entry.result else {'error': entry.error}
+            db.session.delete(entry)
+            db.session.commit()
+            return result
+        else:
+            api_ns.abort(202, status='processing')
+
+# Export for api.py
+__all__ = ['bp', 'process_expression', 'expression_stream', 'api_ns']
