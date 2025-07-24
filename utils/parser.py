@@ -97,7 +97,7 @@ def parser(expression) -> float:
         elif token in ['+', '-', '*', '/', '**']:
             # Handling unary operators
             if (token == '+' or token == '-') and (i == 0 or tokens[i - 1] in ['+', '-', '*', '/', '**', '(']):
-                stack.append('u' + token)  # Mark as unary operator
+                queue.append('u' + token)  # Mark as unary operator, enqueue to queue!
             else:
                 while len(stack) > 0 and (stack[-1] in ['+', '-', '*', '/', '**'] and (precedence(token) <= precedence(stack[-1]))):
                     queue.append(stack.pop())
@@ -127,23 +127,23 @@ def parser(expression) -> float:
         if isinstance(token, int) or (isinstance(token, str) and token.lstrip('-').isdigit()):
             stack.append(int(token)) 
 
-        # If a unary operator -> pop the next token from queue (not stack), apply unary, and push to stack
+        # If a unary operator -> apply to next number in queue
         elif token == 'u-' or token == 'u+':
-            if queue:
+            if len(queue) > 0 and (isinstance(queue[0], int) or (isinstance(queue[0], str) and queue[0].lstrip('-').isdigit())):
                 op = queue.pop(0)
-                if isinstance(op, int) or (isinstance(op, str) and op.lstrip('-').isdigit()):
-                    op = int(op)
+                op = int(op)
                 if token == 'u-':
                     stack.append(-op)
                 elif token == 'u+':
                     stack.append(op)
             else:
-                # fallback to stack if queue is empty (shouldn't happen for correct expressions)
-                op = stack.pop()
-                if token == 'u-':
-                    stack.append(-op)
-                elif token == 'u+':
-                    stack.append(op)
+                # fallback: if stack has an operand, apply unary
+                if stack:
+                    op = stack.pop()
+                    if token == 'u-':
+                        stack.append(-op)
+                    elif token == 'u+':
+                        stack.append(op)
 
         # If a binary operator -> pop the last two operands from stack and push the performed operation
         elif stack and token in ['+', '-', '*', '/', '**']:          
