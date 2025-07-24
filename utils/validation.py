@@ -4,7 +4,7 @@ def is_valid_expression(expr):
     """
     Validate a standard mathematical expression.
 
-    Only allows digits, operators (+, -, *, /), parentheses, and spaces.
+    Only allows digits, operators (+, -, *, /, ^), parentheses, and spaces.
     Disallows consecutive operators.
 
     Args:
@@ -13,11 +13,11 @@ def is_valid_expression(expr):
     Returns:
         bool: True if valid, False otherwise.
     """
-    # Only allow valid characters
-    if not re.match(r'^[\d+\-*/().\s]+$', expr):
+    # Only allow valid characters (add ^)
+    if not re.match(r'^[\d+\-*/().\s^]+$', expr):
         return False
-    # Disallow consecutive operators (simple check)
-    if re.search(r'[\+\-\*/]{2,}', expr):
+    # Disallow consecutive operators (simple check, add ^)
+    if re.search(r'[\+\-\*/^]{2,}', expr):
         return False
     return True
 

@@ -63,6 +63,9 @@ def parser(expression) -> float:
     Raises:
         ValueError: If the expression is invalid.
     """   
+    # Convert ^ to ** for exponentiation
+    expression = expression.replace('^', '**')
+    
     stack = []
     queue = []
     i = 0
