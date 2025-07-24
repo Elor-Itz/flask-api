@@ -127,13 +127,23 @@ def parser(expression) -> float:
         if isinstance(token, int) or (isinstance(token, str) and token.lstrip('-').isdigit()):
             stack.append(int(token)) 
 
-        # If a unary operator -> pop the last operand; if '-' multiply operand by -1 and return to the stack
-        elif stack and (token == 'u+' or token == 'u-'):
-            op = stack.pop()
-            if token == 'u-':
-                stack.append(-op)
-            elif token == 'u+':
-                stack.append(op)
+        # If a unary operator -> pop the next token from queue (not stack), apply unary, and push to stack
+        elif token == 'u-' or token == 'u+':
+            if queue:
+                op = queue.pop(0)
+                if isinstance(op, int) or (isinstance(op, str) and op.lstrip('-').isdigit()):
+                    op = int(op)
+                if token == 'u-':
+                    stack.append(-op)
+                elif token == 'u+':
+                    stack.append(op)
+            else:
+                # fallback to stack if queue is empty (shouldn't happen for correct expressions)
+                op = stack.pop()
+                if token == 'u-':
+                    stack.append(-op)
+                elif token == 'u+':
+                    stack.append(op)
 
         # If a binary operator -> pop the last two operands from stack and push the performed operation
         elif stack and token in ['+', '-', '*', '/', '**']:          
