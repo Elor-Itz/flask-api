@@ -91,6 +91,7 @@
             return response.json();
           })
           .then((data) => {
+            resetFields();
             if (data.request_id) {
               pollResult(data.request_id);
             } else if (data.error !== undefined) {
@@ -149,6 +150,12 @@
               noHistoryMsg.style.display = "";
             }
           });
+      }
+
+      // Reset input fields
+      function resetFields() {
+        document.getElementById("expression").value = "";
+        document.getElementById("variable-value").value = "";
       }
 
       // Allow pressing Enter to evaluate
