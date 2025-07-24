@@ -1,6 +1,6 @@
 from abc import ABC
 from abc import ABC,abstractmethod
-from asteval import Interpreter
+import re
 
 class Expression(ABC):
     @abstractmethod
@@ -140,26 +140,40 @@ def parser(expression) -> float:
     # print("{0} = {1}" .format(expression,stack[0]))    
     return stack[0]
 
-# Parser function to evaluate lambda expressions
-def lambda_parser(expression, value):
+# Parser function to evaluate variable expressions
+def variable_parser(expression, value):
     """
-    Safely evaluate a lambda expression with a given value using asteval.
+    Safely evaluate a math expression with a variable 'x' using your custom parser.
 
     Args:
-        expression (str): The lambda expression (e.g., 'lambda x: x*2').
-        value (float): The value to pass to the lambda function.
+        expression (str): The math expression (e.g., 'x*2+1').
+        value (float): The value to substitute for 'x'.
 
     Returns:
-        float: The result of the lambda function.
+        float: The result of the evaluated expression.
 
     Raises:
-        ValueError: If the expression is not a valid lambda or evaluation fails.
+        ValueError: If the expression is not valid or evaluation fails.
     """
-    if not expression.strip().startswith("lambda"):
-        raise ValueError("Only lambda expressions are allowed.")
-    aeval = Interpreter()
+    # Only allow x, digits, operators, parentheses, spaces
+    if not re.match(r'^[x\d+\-*/().\s]+$', expression):
+        raise ValueError("Unsafe characters in expression.")
+
+    # Insert * for implicit multiplication (e.g., 2x -> 2*x)
+    expr = re.sub(r'(\d)(x)', r'\1*\2', expression)
+    expr = re.sub(r'(x)(\d)', r'\1*\2', expr)
+
+    # Substitute x with value
+    expr = expr.replace('x', str(value))
+
+    # Validate consecutive operators
+    if re.search(r'[\+\-\*/]{2,}', expr):
+        raise ValueError("Invalid consecutive operators.")
+
+    # Use your custom parser for evaluation
     try:
-        func = aeval(expression)
-        return func(value)
+        result = parser(expr)
+        return result
     except Exception as e:
-        raise ValueError(f"Invalid lambda expression: {e}")
+        raise ValueError(f"Invalid math expression: {e}")
+        

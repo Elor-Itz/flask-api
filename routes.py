@@ -1,10 +1,12 @@
 from flask import Blueprint, request, jsonify, render_template
-from flask_restx import Namespace, Resource, fields
+from flask_restx import Resource
 from models import db, ExpressionResult
-from utils.parser import parser, lambda_parser
+from utils.parser import parser, variable_parser
 from utils.stream import Stream
-from utils.validation import is_valid_expression, is_valid_lambda
+from utils.validation import is_valid_expression, is_valid_variable_expression
 import uuid
+
+from api import evaluation_ns, health_ns, evaluate_model, evaluate_variable_model, result_model
 
 # Create a Blueprint for the main application
 bp = Blueprint('main', __name__)
@@ -14,11 +16,17 @@ expression_stream = Stream()
 
 # Function to process expressions in the background
 def process_expression(item, app):
+    """
+    Background task to process an expression or variable expression.
+
+    Args:
+        item: Tuple containing expression data.
+    """
     with app.app_context():
         try:
-            if isinstance(item, tuple) and item[0] == 'lambda':
-                _, expr, value, req_id = item
-                result = lambda_parser(expr, value)
+            if isinstance(item, tuple) and item[0] == 'variable':
+                _, expr, value, req_id = item                
+                result = variable_parser(expr, value)
             else:
                 expr, req_id = item
                 result = parser(expr)
@@ -31,45 +39,28 @@ def process_expression(item, app):
 # Set the stream to use the processing function
 expression_stream.forEach(process_expression)
 
-# --- Web UI routes ---
 @bp.route('/')
 def index():
+    """Render the main web interface."""
     return render_template('index.html')
 
 @bp.route('/health', methods=['GET'])
 def health():
+    """Health check endpoint."""
     return jsonify({'status': 'ok'})
 
-# --- REST API using Flask-RESTX ---
-api_ns = Namespace('api', description='Expression evaluation operations')
-
-# Models for Swagger docs
-evaluate_model = api_ns.model('Evaluate', {
-    'expression': fields.String(required=True, description='Mathematical expression')
-})
-
-evaluate_lambda_model = api_ns.model('EvaluateLambda', {
-    'expression': fields.String(required=True, description='Lambda expression'),
-    'value': fields.Raw(required=True, description='Value for lambda')
-})
-
-result_model = api_ns.model('Result', {
-    'result': fields.String(description='Evaluation result'),
-    'error': fields.String(description='Error message')
-})
-
-@api_ns.route('/health')
+@health_ns.route('/')
 class HealthResource(Resource):
     def get(self):
         """Health check endpoint"""
         return {'status': 'ok'}
 
-@api_ns.route('/evaluate')
+@evaluation_ns.route('/expression')
 class EvaluateResource(Resource):
-    @api_ns.expect(evaluate_model)
+    @evaluation_ns.expect(evaluate_model)
     def post(self):
         """Submit a standard mathematical expression for evaluation"""
-        data = api_ns.payload
+        data = evaluation_ns.payload
         expr = data.get('expression', '')
         if not is_valid_expression(expr):
             return {'error': 'Invalid expression'}, 400
@@ -77,33 +68,41 @@ class EvaluateResource(Resource):
         expression_stream.add((expr, req_id))
         return {'request_id': req_id}
 
-@api_ns.route('/evaluate-lambda')
-class EvaluateLambdaResource(Resource):
-    @api_ns.expect(evaluate_lambda_model)
+@evaluation_ns.route('/variable')
+class EvaluateVariableResource(Resource):
+    @evaluation_ns.expect(evaluate_variable_model)
     def post(self):
-        """Submit a lambda expression and value for evaluation"""
-        data = api_ns.payload
+        """Submit a variable math expression and value for evaluation"""
+        data = request.get_json()
         expr = data.get('expression', '')
         value = data.get('value', 0)
-        if not is_valid_lambda(expr):
-            return {'error': 'Invalid lambda expression'}, 400
+        if not is_valid_variable_expression(expr):
+            return {'error': 'Invalid variable expression'}, 400
         req_id = str(uuid.uuid4())
-        expression_stream.add(('lambda', expr, value, req_id))
+        expression_stream.add(('variable', expr, value, req_id))
         return {'request_id': req_id}
 
-@api_ns.route('/result/<string:req_id>')
+@evaluation_ns.route('/result/<string:req_id>')
 class ResultResource(Resource):
-    @api_ns.marshal_with(result_model, code=200, description='Result or error')
+    @evaluation_ns.marshal_with(result_model)
     def get(self, req_id):
-        """Poll for the result of an evaluated expression"""
+        """
+        Poll for the result of an evaluated expression.
+
+        Args:
+            req_id (str): The request ID.
+
+        Returns:
+            JSON with result or error, or status 'processing'.
+        """
         entry = db.session.get(ExpressionResult, req_id)
         if entry:
             result = {'result': entry.result} if entry.result else {'error': entry.error}
             db.session.delete(entry)
             db.session.commit()
-            return result
+            return result, 200
         else:
-            api_ns.abort(202, status='processing')
+            return {'status': 'processing'}, 202
 
 # Export for api.py
-__all__ = ['bp', 'process_expression', 'expression_stream', 'api_ns']
+__all__ = ['bp', 'process_expression', 'expression_stream']

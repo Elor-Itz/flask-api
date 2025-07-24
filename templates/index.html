@@ -14,12 +14,12 @@
       <input
         type="text"
         id="expression"
-        placeholder="Enter expression (e.g., 2+3*4 or lambda x: x*2)"
+        placeholder="Enter expression (e.g., 2+3*4 or x*2)"
       />
       <input
         type="number"
-        id="lambda-value"
-        placeholder="Lambda value (optional)"
+        id="variable-value"
+        placeholder="Variable value (optional)"
       />
       <button onclick="evaluateExpression()">Evaluate</button>
       <p id="result"></p>
@@ -27,16 +27,16 @@
     <script>
       function evaluateExpression() {
         const expr = document.getElementById("expression").value;
-        const lambdaValue = document.getElementById("lambda-value").value;
+        const variableValue = document.getElementById("variable-value").value;
         document.getElementById("result").innerText = "Processing...";
 
-        let url = "/api/evaluate";
+        let url = "/evaluation/expression";
         let body = { expression: expr };
 
-        // If input starts with "lambda", use the lambda route
-        if (expr.trim().startsWith("lambda")) {
-          url = "/api/evaluate-lambda";
-          body.value = lambdaValue ? Number(lambdaValue) : 0;
+        // If the input contains 'x', treat it as a variable expression
+        if (expr.includes("x")) {
+          url = "/evaluation/variable";
+          body.value = variableValue ? Number(variableValue) : 0;
         }
 
         fetch(url, {
@@ -56,7 +56,7 @@
       }
 
       function pollResult(requestId) {
-        fetch("/api/result/" + requestId)
+        fetch("/evaluation/result/" + requestId)
           .then((response) => response.json())
           .then((data) => {
             if (data.status === "processing") {

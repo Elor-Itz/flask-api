@@ -8,7 +8,6 @@ psycopg2-binary
 
 # Utilities
 python-dotenv
-asteval
 
 # Testing
 pytest
