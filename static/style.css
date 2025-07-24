@@ -128,6 +128,7 @@ table.history-table {
 
 table.history-table th,
 table.history-table td {
+  background: #fff;
   border: 1px solid #ddd;
   padding: 8px;
   text-align: left;
