@@ -1,4 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime, timezone
 
 db = SQLAlchemy()
 
@@ -10,9 +11,9 @@ class ExpressionResult(db.Model):
         id (str): Unique request ID.
         expression (str): The original mathematical expression submitted for evaluation.
         result (str): Evaluation result.
-        error (str): Error message, if any.
+        timestamp (datetime): Timestamp of when the expression was evaluated.
     """
     id = db.Column(db.String(36), primary_key=True)
     expression = db.Column(db.String)
-    result = db.Column(db.String, nullable=True)
-    error = db.Column(db.String, nullable=True)
+    result = db.Column(db.String, nullable=True)    
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))

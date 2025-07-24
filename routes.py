@@ -25,16 +25,16 @@ def process_expression(item, app):
     with app.app_context():
         try:
             if isinstance(item, tuple) and item[0] == 'variable':
-                _, expr, value, req_id = item                
+                _, expr, value, req_id = item
                 result = variable_parser(expr, value)
             else:
                 expr, req_id = item
                 result = parser(expr)
-            entry = ExpressionResult(id=req_id, result=str(result), error=None)
+            entry = ExpressionResult(id=req_id, expression=expr, result=str(result))
+            db.session.merge(entry)
+            db.session.commit()
         except Exception as e:
-            entry = ExpressionResult(id=req_id, result=None, error=str(e))
-        db.session.merge(entry)
-        db.session.commit()
+            print(f"Error processing expression: {e}")         
 
 # Set the stream to use the processing function
 expression_stream.forEach(process_expression)
@@ -103,10 +103,7 @@ class ResultResource(Resource):
         """
         entry = db.session.get(ExpressionResult, req_id)
         if entry:
-            result = {'result': entry.result} if entry.result else {'error': entry.error}
-            db.session.delete(entry)
-            db.session.commit()
-            return result, 200
+            return {'result': entry.result}, 200
         else:
             return {'status': 'processing'}, 202
         
@@ -119,16 +116,16 @@ class HistoryResource(Resource):
         # Get the last 20 results
         results = (
             db.session.query(ExpressionResult)
-            .order_by(ExpressionResult.id.desc())
+            .order_by(ExpressionResult.timestamp.desc())
             .limit(20)
             .all()
         )
         history = [
             {
                 "id": entry.id,
-                "expression": entry.expression if hasattr(entry, "expression") else None,
+                "expression": entry.expression,
                 "result": entry.result,
-                "error": entry.error,
+                "timestamp": entry.timestamp.isoformat() if entry.timestamp else None,
             }
             for entry in results
         ]

@@ -10,19 +10,36 @@
   </head>
   <body>
     <div class="container">
-      <h2>Expression Evaluator</h2>
-      <input
-        type="text"
-        id="expression"
-        placeholder="Enter expression (e.g., 2+3*4 or x*2)"
-      />
-      <input
-        type="number"
-        id="variable-value"
-        placeholder="Variable value (optional)"
-      />
-      <button onclick="evaluateExpression()">Evaluate</button>
-      <p id="result"></p>
+      <div class="main-panel">
+        <h2>Expression Evaluator</h2>
+        <input
+          type="text"
+          id="expression"
+          placeholder="Enter expression (e.g., 2+3*4 or x*2)"
+        />
+        <input
+          type="number"
+          id="variable-value"
+          placeholder="Variable value (optional)"
+        />
+        <button onclick="evaluateExpression()">Evaluate</button>
+        <p id="result"></p>
+      </div>
+      <div class="history-panel">
+        <h3>History</h3>
+        <div id="history-table-container" style="display: none">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Expression</th>
+                <th>Result</th>
+              </tr>
+            </thead>
+            <tbody id="history-list"></tbody>
+          </table>
+        </div>
+        <div id="no-history-message" style="display: none">No history yet.</div>
+      </div>
     </div>
     <script>
       // Set result message with color based on type
@@ -63,7 +80,7 @@
           .then((response) => {
             // Check if the response is OK
             if (!response.ok) {
-              return response.json().then((data) => {                
+              return response.json().then((data) => {
                 setResultMessage(
                   "Error: " + (data.error || "Invalid input."),
                   "error"
@@ -95,8 +112,41 @@
               setTimeout(() => pollResult(requestId), 500);
             } else if (data.result !== undefined) {
               setResultMessage("Result: " + data.result, "result");
+              fetchHistory();
             } else if (data.error !== undefined) {
               setResultMessage("Error: " + data.error, "error");
+              fetchHistory();
+            }
+          });
+      }
+
+      // Fetch and display evaluation history
+      function fetchHistory() {
+        fetch("/evaluation/history")
+          .then((response) => response.json())
+          .then((data) => {
+            const historyList = document.getElementById("history-list");
+            const tableContainer = document.getElementById(
+              "history-table-container"
+            );
+            const noHistoryMsg = document.getElementById("no-history-message");
+            historyList.innerHTML = "";
+            if (data.history && data.history.length > 0) {
+              tableContainer.style.display = "";
+              noHistoryMsg.style.display = "none";
+              data.history.forEach((item) => {
+                const tr = document.createElement("tr");
+                const exprTd = document.createElement("td");
+                exprTd.textContent = item.expression;
+                const resultTd = document.createElement("td");
+                resultTd.innerHTML = `<span class="history-result">${item.result}</span>`;
+                tr.appendChild(exprTd);
+                tr.appendChild(resultTd);
+                historyList.appendChild(tr);
+              });
+            } else {
+              tableContainer.style.display = "none";
+              noHistoryMsg.style.display = "";
             }
           });
       }
@@ -107,6 +157,9 @@
         .addEventListener("keydown", function (e) {
           if (e.key === "Enter") evaluateExpression();
         });
+
+      // Initial history load
+      fetchHistory();
     </script>
   </body>
 </html>

@@ -24,7 +24,7 @@ history_item_model = evaluation_ns.model('HistoryItem', {
     'id': fields.String(description='Request ID'),
     'expression': fields.String(description='Mathematical expression'),
     'result': fields.String(description='Evaluation result'),
-    'error': fields.String(description='Error message'),
+    'timestamp': fields.DateTime(description='Evaluation timestamp'),
 })
 
 history_response_model = evaluation_ns.model('HistoryResponse', {
