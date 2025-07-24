@@ -30,12 +30,12 @@
         const lambdaValue = document.getElementById("lambda-value").value;
         document.getElementById("result").innerText = "Processing...";
 
-        let url = "/evaluate";
+        let url = "/api/evaluate";
         let body = { expression: expr };
 
         // If input starts with "lambda", use the lambda route
         if (expr.trim().startsWith("lambda")) {
-          url = "/evaluate-lambda";
+          url = "/api/evaluate-lambda";
           body.value = lambdaValue ? Number(lambdaValue) : 0;
         }
 
@@ -56,7 +56,7 @@
       }
 
       function pollResult(requestId) {
-        fetch("/result/" + requestId)
+        fetch("/api/result/" + requestId)
           .then((response) => response.json())
           .then((data) => {
             if (data.status === "processing") {
