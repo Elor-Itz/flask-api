@@ -15,8 +15,9 @@ evaluate_variable_model = evaluation_ns.model('EvaluateVariable', {
 })
 
 result_model = evaluation_ns.model('Result', {
+    'status': fields.String(description='Processing status'),
     'result': fields.String(description='Evaluation result'),
-    'error': fields.String(description='Error message')
+    'error': fields.String(description='Error message'),    
 })
 
 api = Api(

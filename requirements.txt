@@ -12,3 +12,4 @@ python-dotenv
 # Testing
 pytest
 pytest-flask
+pytest-cov
