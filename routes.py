@@ -109,6 +109,30 @@ class ResultResource(Resource):
             return result, 200
         else:
             return {'status': 'processing'}, 202
+        
+@evaluation_ns.route('/history')
+class HistoryResource(Resource):
+    def get(self):
+        """
+        Return the history of evaluated expressions and their results.
+        """
+        # Get the last 20 results
+        results = (
+            db.session.query(ExpressionResult)
+            .order_by(ExpressionResult.id.desc())
+            .limit(20)
+            .all()
+        )
+        history = [
+            {
+                "id": entry.id,
+                "expression": entry.expression if hasattr(entry, "expression") else None,
+                "result": entry.result,
+                "error": entry.error,
+            }
+            for entry in results
+        ]
+        return {"history": history}
 
 # Export for api.py
 __all__ = ['bp', 'process_expression', 'expression_stream']

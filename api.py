@@ -20,6 +20,17 @@ result_model = evaluation_ns.model('Result', {
     'error': fields.String(description='Error message'),    
 })
 
+history_item_model = evaluation_ns.model('HistoryItem', {
+    'id': fields.String(description='Request ID'),
+    'expression': fields.String(description='Mathematical expression'),
+    'result': fields.String(description='Evaluation result'),
+    'error': fields.String(description='Error message'),
+})
+
+history_response_model = evaluation_ns.model('HistoryResponse', {
+    'history': fields.List(fields.Nested(history_item_model))
+})
+
 api = Api(
     title="Expression Evaluator API",
     version="1.0",
