@@ -9,20 +9,56 @@
     />
   </head>
   <body>
-    <div class="container">
-      <h2>Expression Evaluator</h2>
-      <input
-        type="text"
-        id="expression"
-        placeholder="Enter expression (e.g., 2+3*4 or x*2)"
-      />
-      <input
-        type="number"
-        id="variable-value"
-        placeholder="Variable value (optional)"
-      />
-      <button onclick="evaluateExpression()">Evaluate</button>
-      <p id="result"></p>
+    <div class="layout">
+      <div class="container">
+        <div class="main-panel">
+          <h2>Expression Evaluator</h2>
+          <div class="input-group">
+            <label for="expression" class="input-label">Expression</label>
+            <input
+              type="text"
+              id="expression"
+              class="input-field"
+              placeholder="Enter expression (e.g., 2+3*4 or x*2)"
+            />
+          </div>
+          <div class="input-group variable-group">
+            <label for="variable-value" class="input-label">
+              Variable value (<span style="font-weight: bold">x</span>)
+            </label>
+            <input
+              type="number"
+              id="variable-value"
+              class="input-field"
+              placeholder="e.g. 5"
+              min="0"
+              step="any"
+            />
+          </div>
+          <button class="eval-btn" onclick="evaluateExpression()">
+            Evaluate
+          </button>
+          <p id="result"></p>
+        </div>
+      </div>
+      <div class="history-panel">
+        <h3 style="cursor: pointer" id="toggle-history-btn">
+          History
+          <span style="font-size: 0.9em; font-weight: normal">(Hide)</span>
+        </h3>
+        <div id="history-table-container" style="display: none">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Expression</th>
+                <th>Result</th>
+              </tr>
+            </thead>
+            <tbody id="history-list"></tbody>
+          </table>
+        </div>
+        <div id="no-history-message" style="display: none">No history yet.</div>
+      </div>
     </div>
     <script>
       // Set result message with color based on type
@@ -63,7 +99,7 @@
           .then((response) => {
             // Check if the response is OK
             if (!response.ok) {
-              return response.json().then((data) => {                
+              return response.json().then((data) => {
                 setResultMessage(
                   "Error: " + (data.error || "Invalid input."),
                   "error"
@@ -74,6 +110,7 @@
             return response.json();
           })
           .then((data) => {
+            resetFields();
             if (data.request_id) {
               pollResult(data.request_id);
             } else if (data.error !== undefined) {
@@ -95,10 +132,68 @@
               setTimeout(() => pollResult(requestId), 500);
             } else if (data.result !== undefined) {
               setResultMessage("Result: " + data.result, "result");
+              fetchHistory();
             } else if (data.error !== undefined) {
               setResultMessage("Error: " + data.error, "error");
+              fetchHistory();
             }
           });
+      }
+
+      // Toggle history panel
+      const toggleBtn = document.getElementById("toggle-history-btn");
+      const tableContainer = document.getElementById("history-table-container");
+      const noHistoryMsg = document.getElementById("no-history-message");
+      let historyVisible = true;
+
+      toggleBtn.addEventListener("click", function () {
+        historyVisible = !historyVisible;
+        if (historyVisible) {
+          toggleBtn.querySelector("span").textContent = "(Hide)";
+          // Re-check history and show the correct element
+          fetchHistory();
+        } else {
+          toggleBtn.querySelector("span").textContent = "(Show)";
+          tableContainer.style.display = "none";
+          noHistoryMsg.style.display = "none";
+        }
+      });
+
+      // Fetch and display evaluation history
+      function fetchHistory() {
+        fetch("/evaluation/history")
+          .then((response) => response.json())
+          .then((data) => {
+            const historyList = document.getElementById("history-list");
+            historyList.innerHTML = "";
+            if (data.history && data.history.length > 0) {
+              if (historyVisible) {
+                tableContainer.style.display = "";
+                noHistoryMsg.style.display = "none";
+              }
+              data.history.forEach((item) => {
+                const tr = document.createElement("tr");
+                const exprTd = document.createElement("td");
+                exprTd.textContent = item.expression;
+                const resultTd = document.createElement("td");
+                resultTd.innerHTML = item.result;
+                tr.appendChild(exprTd);
+                tr.appendChild(resultTd);
+                historyList.appendChild(tr);
+              });
+            } else {
+              if (historyVisible) {
+                tableContainer.style.display = "none";
+                noHistoryMsg.style.display = "";
+              }
+            }
+          });
+      }
+
+      // Reset input fields
+      function resetFields() {
+        document.getElementById("expression").value = "";
+        document.getElementById("variable-value").value = "";
       }
 
       // Allow pressing Enter to evaluate
@@ -107,6 +202,9 @@
         .addEventListener("keydown", function (e) {
           if (e.key === "Enter") evaluateExpression();
         });
+
+      // Initial history load
+      fetchHistory();
     </script>
   </body>
 </html>

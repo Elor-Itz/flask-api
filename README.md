@@ -76,6 +76,7 @@ This project is a Flask-based microservice API for evaluating mathematical expre
 - **Standard expressions:** Enter a mathematical expression (e.g., `2+3*4`) in the web interface and submit.
 - **Variable expressions:** Enter a variable math expression (e.g., `x*2` or `x^2 + 2*x + 1`) and provide a value for `x` in the Variable value field.
 - The API will return a `request_id`. The front end will poll for the result and display it when ready.
+- **Successful evaluations are saved to history. Errors are displayed immediately but not stored.**
 - All inputs are validated for safety before processing.
 
 ## API Endpoints
@@ -88,9 +89,10 @@ This project is a Flask-based microservice API for evaluating mathematical expre
 ## Testing
 
 - Automated tests cover validation, error handling, and asynchronous processing.
-- To run tests:
+- Test coverage is measured with `pytest-cov`.
+- To run tests and view coverage:
   ```
-  pytest
+  pytest --cov
   ```
 
 ## Project Structure
@@ -99,6 +101,7 @@ This project is a Flask-based microservice API for evaluating mathematical expre
 expression-evaluator/
 │
 ├── app.py                # Main Flask application setup and entry point
+├── api.py                # API namespaces and Swagger models
 ├── requirements.txt      # Python package dependencies
 ├── .env                  # Environment variables for local/dev setup
 ├── Dockerfile            # Docker image build instructions
