@@ -62,8 +62,9 @@ class EvaluateResource(Resource):
         """Submit a standard mathematical expression for evaluation"""
         data = evaluation_ns.payload
         expr = data.get('expression', '')
-        if not is_valid_expression(expr):
-            return {'error': 'Invalid expression'}, 400
+        result = is_valid_expression(expr)
+        if result is not True:
+            return {'error': result}, 400
         req_id = str(uuid.uuid4())
         try:            
             parser(expr)
@@ -80,8 +81,9 @@ class EvaluateVariableResource(Resource):
         data = request.get_json()
         expr = data.get('expression', '')
         value = data.get('value', 0)
-        if not is_valid_variable_expression(expr):
-            return {'error': 'Invalid variable expression'}, 400
+        result = is_valid_variable_expression(expr)
+        if result is not True:
+            return {'error': result}, 400
         req_id = str(uuid.uuid4())
         expression_stream.add(('variable', expr, value, req_id))
         return {'request_id': req_id}

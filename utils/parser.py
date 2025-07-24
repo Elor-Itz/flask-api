@@ -62,7 +62,7 @@ def parser(expression) -> float:
 
     Raises:
         ValueError: If the expression is invalid.
-    """   
+    """ 
     # Convert ^ to ** for exponentiation
     expression = expression.replace('^', '**')
     
@@ -169,6 +169,8 @@ def parser(expression) -> float:
             if token == '*':
                 calc = left * right
             if token == '/':
+                if right == 0:
+                    raise ZeroDivisionError("Division by zero is not allowed.")
                 calc = left / right
             if token == '**':
                 calc = left ** right

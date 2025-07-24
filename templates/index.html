@@ -25,10 +25,26 @@
       <p id="result"></p>
     </div>
     <script>
+      // Set result message with color based on type
+      function setResultMessage(message, type) {
+        const resultElem = document.getElementById("result");
+        resultElem.innerText = message;
+        if (type === "result") {
+          resultElem.style.color = "blue";
+        } else if (type === "error") {
+          resultElem.style.color = "red";
+        } else if (type === "processing") {
+          resultElem.style.color = "gray";
+        } else {
+          resultElem.style.color = "";
+        }
+      }
+
+      // Evaluate expression and handle variable if present
       function evaluateExpression() {
         const expr = document.getElementById("expression").value;
         const variableValue = document.getElementById("variable-value").value;
-        document.getElementById("result").innerText = "Processing...";
+        setResultMessage("Processing...", "processing");
 
         let url = "/evaluation/expression";
         let body = { expression: expr };
@@ -44,29 +60,43 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         })
-          .then((response) => response.json())
+          .then((response) => {
+            // Check if the response is OK
+            if (!response.ok) {
+              return response.json().then((data) => {                
+                setResultMessage(
+                  "Error: " + (data.error || "Invalid input."),
+                  "error"
+                );
+                throw new Error(data.error || "Invalid input.");
+              });
+            }
+            return response.json();
+          })
           .then((data) => {
             if (data.request_id) {
               pollResult(data.request_id);
+            } else if (data.error !== undefined) {
+              setResultMessage("Error: " + data.error, "error");
             } else {
-              document.getElementById("result").innerText =
-                "Error: Invalid response from server.";
+              setResultMessage("Error: Invalid response from server.", "error");
             }
-          });
+          })
+          .catch(() => {});
       }
 
+      // Poll for result using request ID
       function pollResult(requestId) {
         fetch("/evaluation/result/" + requestId)
           .then((response) => response.json())
           .then((data) => {
             if (data.status === "processing") {
+              setResultMessage("Processing...", "processing");
               setTimeout(() => pollResult(requestId), 500);
             } else if (data.result !== undefined) {
-              document.getElementById("result").innerText =
-                "Result: " + data.result;
+              setResultMessage("Result: " + data.result, "result");
             } else if (data.error !== undefined) {
-              document.getElementById("result").innerText =
-                "Error: " + data.error;
+              setResultMessage("Error: " + data.error, "error");
             }
           });
       }

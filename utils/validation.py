@@ -13,12 +13,15 @@ def is_valid_expression(expr):
     Returns:
         bool: True if valid, False otherwise.
     """
+    # Check for empty expression
+    if not expr or not expr.strip():
+        return "Expression cannot be empty."
     # Only allow valid characters (add ^)
     if not re.match(r'^[\d+\-*/().\s^]+$', expr):
-        return False
+        return "Unsafe characters in expression."
     # Disallow consecutive operators (simple check, add ^)
     if re.search(r'[\+\-\*/^]{2,}', expr):
-        return False
+        return "Consecutive operators are not allowed."
     return True
 
 def is_valid_variable_expression(expr):
@@ -34,12 +37,15 @@ def is_valid_variable_expression(expr):
     Returns:
         bool: True if valid, False otherwise.
     """
+    # Check for empty expression
+    if not expr or not expr.strip():
+        return "Expression cannot be empty."
     # Only allow x, digits, operators, parentheses, spaces, and ^
     if not re.match(r'^[x\d+\-*/().\s^]+$', expr):
-        return False
+        return "Unsafe characters in expression."
     # Disallow consecutive operators (simple check)
     if re.search(r'[\+\-\*/^]{2,}', expr):
-        return False
+        return "Consecutive operators are not allowed."
     if 'import' in expr:
-        return False
+        return "Import statements are not allowed."
     return True
