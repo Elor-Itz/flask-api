@@ -25,21 +25,24 @@
         <button onclick="evaluateExpression()">Evaluate</button>
         <p id="result"></p>
       </div>
-      <div class="history-panel">
-        <h3>History</h3>
-        <div id="history-table-container" style="display: none">
-          <table class="history-table">
-            <thead>
-              <tr>
-                <th>Expression</th>
-                <th>Result</th>
-              </tr>
-            </thead>
-            <tbody id="history-list"></tbody>
-          </table>
-        </div>
-        <div id="no-history-message" style="display: none">No history yet.</div>
+    </div>
+    <div class="history-panel">
+      <h3 style="cursor: pointer" id="toggle-history-btn">
+        History
+        <span style="font-size: 0.9em; font-weight: normal">(Hide)</span>
+      </h3>
+      <div id="history-table-container" style="display: none">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>Expression</th>
+              <th>Result</th>
+            </tr>
+          </thead>
+          <tbody id="history-list"></tbody>
+        </table>
       </div>
+      <div id="no-history-message" style="display: none">No history yet.</div>
     </div>
     <script>
       // Set result message with color based on type
@@ -121,20 +124,37 @@
           });
       }
 
+      // Toggle history panel
+      const toggleBtn = document.getElementById("toggle-history-btn");
+      const tableContainer = document.getElementById("history-table-container");
+      const noHistoryMsg = document.getElementById("no-history-message");
+      let historyVisible = true;
+
+      toggleBtn.addEventListener("click", function () {
+        historyVisible = !historyVisible;
+        if (historyVisible) {
+          toggleBtn.querySelector("span").textContent = "(Hide)";
+          // Re-check history and show the correct element
+          fetchHistory();
+        } else {
+          toggleBtn.querySelector("span").textContent = "(Show)";
+          tableContainer.style.display = "none";
+          noHistoryMsg.style.display = "none";
+        }
+      });
+
       // Fetch and display evaluation history
       function fetchHistory() {
         fetch("/evaluation/history")
           .then((response) => response.json())
           .then((data) => {
             const historyList = document.getElementById("history-list");
-            const tableContainer = document.getElementById(
-              "history-table-container"
-            );
-            const noHistoryMsg = document.getElementById("no-history-message");
             historyList.innerHTML = "";
             if (data.history && data.history.length > 0) {
-              tableContainer.style.display = "";
-              noHistoryMsg.style.display = "none";
+              if (historyVisible) {
+                tableContainer.style.display = "";
+                noHistoryMsg.style.display = "none";
+              }
               data.history.forEach((item) => {
                 const tr = document.createElement("tr");
                 const exprTd = document.createElement("td");
@@ -146,8 +166,10 @@
                 historyList.appendChild(tr);
               });
             } else {
-              tableContainer.style.display = "none";
-              noHistoryMsg.style.display = "";
+              if (historyVisible) {
+                tableContainer.style.display = "none";
+                noHistoryMsg.style.display = "";
+              }
             }
           });
       }
